@@ -6,7 +6,6 @@
 
   const TYPES = Object.freeze([
     { key: 'main-stance', label: '站姿招手' },
-    { key: 'laugh-closeup', label: '大笑特写' },
     { key: 'thinking', label: '托腮思考' },
     { key: 'pray-wings', label: '天使合掌' },
     { key: 'shocked', label: '抱头震惊' },
@@ -67,7 +66,7 @@
     const groups = [];
     const available = level === 1 ? TYPES.slice(0, 8) : TYPES;
     available.forEach(type => {
-      const copies = level === 1 ? 3 : 6; // 24 / 102 张，均为 3 的倍数
+      const copies = level === 1 ? 3 : 6; // 24 / 96 张，均为 3 的倍数
       for (let n = 0; n < copies / 3; n++) groups.push(type.key);
     });
     shuffle(groups, random);

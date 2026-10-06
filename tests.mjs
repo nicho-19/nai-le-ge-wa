@@ -25,18 +25,18 @@ function smallGame(types) {
 }
 
 const expectedTypes = [
-  'main-stance', 'laugh-closeup', 'thinking', 'pray-wings', 'shocked', 'monk',
+  'main-stance', 'thinking', 'pray-wings', 'shocked', 'monk',
   'belly-hold-a', 'profile-stand', 'laugh-headback', 'santa-lie', 'point-laugh',
   'peace-tongue', 'running', 'dancing', 'sleeping', 'chef', 'superhero'
 ];
 assert.deepEqual(TYPES.map(type => type.key), expectedTypes);
-assert.equal(TYPES.length, 17);
+assert.equal(TYPES.length, 16);
 for (const type of TYPES) assert.equal(existsSync(new URL(`./assets/${type.key}.png`, import.meta.url)), true);
-console.log('✓ 17 种牌型顺序与图片文件一一对应');
+console.log('✓ 16 种牌型顺序与图片文件一一对应');
 for (const level of [1, 2]) {
   for (let seed = 0; seed < (level === 2 ? 25 : 8); seed++) {
     const game = createGame(level, seed);
-    assert.equal(game.tiles.length, level === 1 ? 24 : 102);
+    assert.equal(game.tiles.length, level === 1 ? 24 : 96);
     assert.equal(game.solutionOrder.length, game.tiles.length);
     assert.equal(new Set(game.solutionOrder).size, game.tiles.length);
     assert.deepEqual(createGame(level, seed), game, '同一 seed 应生成相同牌局');
@@ -50,7 +50,7 @@ for (const level of [1, 2]) {
 console.log('✓ 两关张数、类型计数、复现性及 25 个招牌关种子的解序');
 
 {
-  const game = smallGame(['main-stance', 'laugh-closeup']);
+  const game = smallGame(['main-stance', 'thinking']);
   game.tiles[0].x = game.tiles[1].x = .2;
   game.tiles[0].layer = 1;
   game.tiles[1].layer = 2;
@@ -80,7 +80,7 @@ console.log('✓ 上层重叠遮挡与揭开后可点击');
 console.log('✓ 三消、消除后撤销恢复三张牌、撤销限用一次');
 
 {
-  const game = smallGame(['main-stance', 'laugh-closeup']);
+  const game = smallGame(['main-stance', 'thinking']);
   const before = JSON.parse(JSON.stringify({ tiles: game.tiles, slot: game.slot,
     held: game.held, status: game.status }));
   assert.equal(clickTile(game, 't0'), true);
@@ -122,7 +122,7 @@ console.log('✓ 洗牌计数守恒、仍有解、限用一次与道具撤销');
 console.log('✓ 中途洗牌的棋盘计数与新解序');
 
 {
-  const game = smallGame(['main-stance', 'laugh-closeup', 'main-stance', 'main-stance', 'laugh-closeup', 'laugh-closeup']);
+  const game = smallGame(['main-stance', 'thinking', 'main-stance', 'main-stance', 'thinking', 'thinking']);
   for (const id of ['t0', 't1', 't2']) assert.equal(clickTile(game, id), true);
   assert.deepEqual(game.slot, ['t0', 't2', 't1'], '同类应相邻聚拢');
   assert.equal(useMoveOut(game), true);
@@ -145,7 +145,7 @@ console.log('✓ 中途洗牌的棋盘计数与新解序');
 console.log('✓ 移出、暂存牌点回、正常消除、全清胜利与限用一次');
 
 {
-  const game = smallGame(['main-stance', 'laugh-closeup', 'main-stance']);
+  const game = smallGame(['main-stance', 'thinking', 'main-stance']);
   clickTile(game, 't0');
   clickTile(game, 't1');
   const beforeMove = JSON.parse(JSON.stringify({ tiles: game.tiles, slot: game.slot, held: game.held }));
@@ -156,7 +156,7 @@ console.log('✓ 移出、暂存牌点回、正常消除、全清胜利与限用
 }
 
 {
-  const game = smallGame(['main-stance', 'laugh-closeup', 'main-stance']);
+  const game = smallGame(['main-stance', 'thinking', 'main-stance']);
   clickTile(game, 't0');
   clickTile(game, 't1');
   useMoveOut(game);
