@@ -10,27 +10,55 @@
   let game;
   let pendingLevel = 1;
   const imageState = new Map();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let lastRemaining;
 
   (function bgm() {
     const button = byId('bgm-button');
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    const bpm = 132;
+    const bpm = 128;
     const stepTime = 60 / bpm / 2;
-    const motif = [0, 0, 2, null, 4, 4, 5, 4, 2, 2, 1, null, 2, 4, 2, 0];
-    const answer = [2, 2, 4, null, 5, 5, 4, 2, 1, 1, 2, null, 3, 4, 3, 2];
-    const variation = [0, 0, 3, null, 5, 5, 4, 3, 2, 2, 4, null, 5, 4, 2, 1];
-    const ending = [2, 2, 4, null, 5, 5, 4, 2, 1, 1, 2, null, 1, 0, 0, 0];
-    const melody = [...motif, ...motif, ...answer, ...motif, ...motif, ...variation,
-      ...motif, ...ending];
+    // 《奶泡蹦蹦》: intro(1–2), A(3–6), A'(7–10), B(11–14), turn(15–16).
+    // Each row is one 4/4 bar of eight eighth-note steps; null is a rest.
+    const intro = [
+      [null, 74, 78, null, 79, null, 78, null],
+      [76, null, 74, null, 73, null, 76, null]
+    ];
+    const a = [
+      [null, 74, 78, 79, null, 78, 76, 74],
+      [76, null, 74, 71, 74, null, 76, 74],
+      [null, 74, 78, 79, null, 78, 76, 74],
+      [73, null, 76, 78, 76, null, 73, null]
+    ];
+    const aPrime = [
+      [null, 78, 81, 83, null, 81, 79, 78],
+      [76, null, 78, 76, 74, null, 76, 78],
+      [null, 74, 78, 79, null, 81, 79, 78],
+      [76, null, 73, 76, 78, null, 76, null]
+    ];
+    const b = [
+      [76, null, null, 74, null, 71, null, null],
+      [74, null, 70, null, 74, null, null, null],
+      [78, null, null, 76, null, 74, null, null],
+      [76, null, 73, null, 76, null, null, null]
+    ];
+    const turn = [
+      [null, 74, 78, 79, null, 78, null, 76],
+      [73, null, 76, null, 76, 73, null, null]
+    ];
+    const melody = [...intro, ...a, ...aPrime, ...b, ...turn].flat();
     if (melody.length !== 128) throw new Error('BGM melody must contain 128 steps');
-    const notes = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
-    const progression = Array.from({ length: 16 }, (_, bar) => ['C', 'G', 'Am', 'F'][bar % 4]);
+    const frequency = midi => 440 * 2 ** ((midi - 69) / 12);
+    const progression = ['D', 'A', 'D', 'Bm', 'G', 'A', 'D', 'Bm',
+      'G', 'A', 'Em', 'Gm', 'D', 'A', 'G', 'A7'];
     const chords = {
-      C: { pad: [261.63, 329.63, 392], bass: 130.81 },
-      G: { pad: [196, 246.94, 293.66], bass: 98 },
-      Am: { pad: [220, 261.63, 329.63], bass: 110 },
-      F: { pad: [174.61, 220, 261.63], bass: 87.31 },
-      Dm: { pad: [146.83, 174.61, 220], bass: 73.42 }
+      D: { pad: [62, 66, 69], bass: 38 },
+      A: { pad: [61, 64, 69], bass: 33 },
+      Bm: { pad: [59, 62, 66], bass: 35 },
+      G: { pad: [59, 62, 67], bass: 31 },
+      Em: { pad: [59, 64, 67], bass: 28 },
+      Gm: { pad: [58, 62, 67], bass: 31 },
+      A7: { pad: [61, 64, 67], bass: 33 }
     };
     let preferred = true;
     try { preferred = localStorage.getItem('naiwa-bgm') !== 'off'; } catch (_) { /* Storage can be unavailable. */ }
@@ -55,7 +83,7 @@
       context = new AudioContextClass();
       const filter = context.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 3200;
+      filter.frequency.value = 3000;
       master = context.createGain();
       master.gain.value = 0.32;
       filter.connect(master);
@@ -86,7 +114,7 @@
       oscillator.type = 'sine';
       oscillator.frequency.setValueAtTime(130, time);
       oscillator.frequency.exponentialRampToValueAtTime(42, time + 0.12);
-      gain.gain.setValueAtTime(0.5, time);
+      gain.gain.setValueAtTime(0.42, time);
       gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.12);
       oscillator.connect(gain);
       gain.connect(master);
@@ -101,7 +129,7 @@
       source.buffer = hatNoise;
       filter.type = 'highpass';
       filter.frequency.value = 7000;
-      gain.gain.setValueAtTime(0.06, time);
+      gain.gain.setValueAtTime(0.045, time);
       gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.03);
       source.connect(filter);
       filter.connect(gain);
@@ -113,18 +141,20 @@
     function schedule() {
       while (nextTime < context.currentTime + 0.1) {
         const note = melody[nextStep];
-        if (note !== null) {
-          const held = melody[(nextStep + 1) % melody.length] === null;
-          tone(notes[note], nextTime, stepTime * (held ? 1.8 : 0.86), 0.30, 'square');
-        }
+        if (note !== null) tone(frequency(note), nextTime, stepTime * 0.86, 0.24, 'square');
         const beat = nextStep % 8;
-        const chord = chords[progression[Math.floor(nextStep / 8)]];
-        tone(chord.bass * (nextStep % 2 ? 1.5 : 1), nextTime, stepTime * 0.8, 0.16, 'triangle');
-        if (beat === 0 || beat === 4) {
-          kick(nextTime);
-          chord.pad.forEach(frequency => tone(frequency, nextTime, stepTime * 2, 0.045, 'sine', 0.008));
+        const bar = Math.floor(nextStep / 8);
+        const bridge = bar >= 10 && bar <= 13;
+        const chord = chords[progression[bar]];
+        if (beat === 0 || beat === 4 || (!bridge && (beat === 3 || beat === 6))) {
+          const bassNote = beat === 3 ? chord.bass + 7 : beat === 6 ? chord.bass + 2 : chord.bass;
+          tone(frequency(bassNote), nextTime, stepTime * 0.76, 0.15, 'triangle');
         }
-        if (beat % 2 === 1) hat(nextTime);
+        if (beat === 0 || (beat === 4 && !bridge)) kick(nextTime);
+        if (beat === 0 || (beat === 4 && !bridge && bar !== 15)) {
+          chord.pad.forEach(pitch => tone(frequency(pitch), nextTime, stepTime * 2.2, 0.038, 'sine', 0.008));
+        }
+        if (bar > 0 && beat % 2 === 1 && (!bridge || beat === 3 || beat === 7) && nextStep !== 127) hat(nextTime);
         nextStep = (nextStep + 1) % melody.length;
         nextTime += stepTime;
       }
@@ -244,8 +274,20 @@
       if (game.slot[i]) cell.append(tileElement(game.tiles.find(tile => tile.id === game.slot[i]), 'slot', false));
       return cell;
     }));
-    byId('remaining-count').textContent = game.tiles.filter(tile => tile.state === 'board').length;
-    byId('slot-warning').textContent = game.slot.length === 6 ? '⚠ 只剩最后一格！' : '';
+    const remaining = game.tiles.filter(tile => tile.state === 'board').length;
+    const badge = byId('remaining-count');
+    badge.textContent = remaining;
+    if (lastRemaining !== undefined && lastRemaining !== remaining && !reducedMotion.matches) {
+      badge.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.22)' },
+        { transform: 'scale(1)' }], { duration: 200, easing: 'ease-out' });
+    }
+    lastRemaining = remaining;
+    const percent = Math.round(game.tiles.filter(tile => tile.state === 'gone').length / game.tiles.length * 100);
+    byId('progress-fill').style.transform = `scaleX(${percent / 100})`;
+    document.querySelector('.progress-track').setAttribute('aria-valuenow', String(percent));
+    slot.classList.toggle('slot-danger', game.slot.length >= 5);
+    byId('slot-warning').textContent = game.slot.length === 6 ? '⚠ 只剩最后一格！'
+      : game.slot.length === 5 ? '槽位快满了' : '';
     document.querySelectorAll('.level-button').forEach(button => {
       button.classList.toggle('active', Number(button.dataset.level) === game.level);
       button.setAttribute('aria-pressed', String(Number(button.dataset.level) === game.level));
@@ -301,31 +343,90 @@
     ghost.style.width = `${start.width}px`;
     ghost.style.height = `${start.height}px`;
     document.body.append(ghost);
+    if (reducedMotion.matches) { ghost.remove(); return; }
     ghost.animate([
       { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${(target.left - start.left) * .52}px,${(target.top - start.top) * .35 - 18}px) scale(.92)`, opacity: .9, offset: .48 },
       { transform: `translate(${target.left - start.left}px,${target.top - start.top}px) scale(${target.width / start.width})`, opacity: .15 }
-    ], { duration: 260, easing: 'ease-in-out' }).onfinish = () => ghost.remove();
+    ], { duration: 260, easing: 'cubic-bezier(.22,.72,.24,1)' }).onfinish = () => ghost.remove();
     setTimeout(() => ghost.remove(), 300);
   }
 
-  function reset(level, seed) { game = logic.createGame(level, seed); render(); }
+  function matchFeedback(beforeSlot, clickedId, clickedRect, targetRect) {
+    const removed = [...beforeSlot.keys(), clickedId].filter(id =>
+      game.tiles.find(tile => tile.id === id)?.state === 'gone');
+    if (removed.length !== 3 || reducedMotion.matches) return;
+    const bounds = slot.getBoundingClientRect();
+    removed.forEach((id, i) => {
+      const rect = beforeSlot.get(id) || targetRect || clickedRect;
+      const tile = game.tiles.find(item => item.id === id);
+      const spark = tileElement(tile, 'slot', false);
+      spark.classList.add('match-ghost');
+      spark.style.left = `${rect.left}px`;
+      spark.style.top = `${rect.top}px`;
+      spark.style.width = `${rect.width}px`;
+      spark.style.height = `${rect.height}px`;
+      document.body.append(spark);
+      spark.animate([
+        { transform: 'translateY(0) scale(1)', opacity: 1 },
+        { transform: 'translateY(-12px) scale(1.13)', opacity: .9, offset: .42 },
+        { transform: 'translateY(-22px) scale(.62)', opacity: 0 }
+      ], { duration: 240, easing: 'ease-out', delay: i * 12 }).onfinish = () => spark.remove();
+      setTimeout(() => spark.remove(), 290);
+    });
+    const center = beforeSlot.get(removed[0]) || clickedRect;
+    for (let i = 0; i < 7; i++) {
+      const particle = document.createElement('span');
+      particle.className = 'match-particle';
+      particle.style.left = `${center.left - bounds.left + center.width / 2}px`;
+      particle.style.top = `${center.top - bounds.top - 5}px`;
+      slot.append(particle);
+      const angle = (i / 7) * Math.PI * 2;
+      particle.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: `translate(${Math.cos(angle) * 27}px,${Math.sin(angle) * 16 - 22}px) scale(.15)`, opacity: 0 }
+      ], { duration: 240, easing: 'ease-out' }).onfinish = () => particle.remove();
+      setTimeout(() => particle.remove(), 280);
+    }
+  }
+
+  function clickWithFeedback(click, tile) {
+    const id = tile.dataset.id;
+    const start = tile.getBoundingClientRect();
+    const ghost = tile.cloneNode(true);
+    const beforeSlot = new Map(game.slot.map((slotId, i) =>
+      [slotId, slot.children[i].getBoundingClientRect()]));
+    const clickedType = game.tiles.find(item => item.id === id).type;
+    const lastMatch = game.slot.reduce((last, slotId, i) =>
+      game.tiles.find(item => item.id === slotId).type === clickedType ? i : last, -1);
+    const targetRect = slot.children[Math.min(lastMatch < 0 ? game.slot.length : lastMatch + 1, 6)]?.getBoundingClientRect();
+    if (click(game, id)) {
+      render();
+      flyToSlot(ghost, start, id);
+      matchFeedback(beforeSlot, id, start, targetRect);
+    }
+  }
+
+  function reset(level, seed) {
+    game = logic.createGame(level, seed);
+    lastRemaining = undefined;
+    render();
+    if (!reducedMotion.matches) board.animate([
+      { opacity: 0, transform: 'translateY(9px)' },
+      { opacity: 1, transform: 'translateY(0)' }
+    ], { duration: 280, easing: 'ease-out' });
+  }
   board.addEventListener('click', event => {
     if (!game) return;
     const tile = event.target.closest('.tile');
     if (!tile) return;
-    const start = tile.getBoundingClientRect();
-    const ghost = tile.cloneNode(true);
-    const id = tile.dataset.id;
-    if (logic.clickTile(game, id)) { render(); flyToSlot(ghost, start, id); }
+    clickWithFeedback(logic.clickTile, tile);
   });
   held.addEventListener('click', event => {
     if (!game) return;
     const tile = event.target.closest('.tile');
     if (!tile) return;
-    const start = tile.getBoundingClientRect();
-    const ghost = tile.cloneNode(true);
-    const id = tile.dataset.id;
-    if (logic.clickHeld(game, id)) { render(); flyToSlot(ghost, start, id); }
+    clickWithFeedback(logic.clickHeld, tile);
   });
   byId('undo-button').addEventListener('click', () => { if (game && logic.useUndo(game)) render(); });
   byId('shuffle-button').addEventListener('click', () => { if (game && logic.useShuffle(game, Date.now())) render(); });
