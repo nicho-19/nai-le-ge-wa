@@ -17,17 +17,33 @@
     const bpm = 92;
     const stepTime = 60 / bpm / 2;
     const melody = [
-      0, null, 2, null, 3, 2, 1, null,
-      0, null, 1, 2, 3, null, 2, null,
-      4, null, 3, 2, 1, null, 0, null,
-      1, 2, 3, null, 2, null, 1, null,
-      0, null, 2, 3, 4, null, 3, null,
-      2, null, 1, 0, 1, null, 2, null,
-      3, null, 4, 3, 2, null, 1, null,
-      0, null, 1, 2, 0, null, null, null
+      0, 1, 2, null, 3, 2, 1, 0,
+      1, 2, 3, 2, 1, null, 2, 3,
+      2, 3, 4, null, 3, 2, 1, 2,
+      0, 1, 2, 3, 2, null, 1, 0,
+      0, 1, 2, null, 3, 4, 3, 2,
+      1, 2, 3, 4, 3, null, 2, 1,
+      2, 3, 4, null, 3, 2, 1, 2,
+      1, 2, 1, 0, 0, null, 0, 0,
+      0, 1, 2, null, 3, 2, 1, 0,
+      1, 2, 3, 2, 1, null, 2, 3,
+      2, 3, 4, null, 3, 2, 1, 2,
+      0, 1, 2, 3, 2, null, 1, 0,
+      1, 2, 3, null, 4, 3, 2, 1,
+      2, 3, 4, 5, 4, null, 3, 2,
+      2, 3, 4, null, 3, 2, 1, 0,
+      2, 1, 0, null, 2, 2, 2, 2
     ];
-    const notes = [523.25, 587.33, 659.25, 783.99, 880];
-    const bass = [130.81, 98, 110, 98, 130.81, 164.81, 98, 130.81];
+    const notes = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+    const progression = ['C', 'G', 'Am', 'F', 'C', 'G', 'F', 'G',
+      'C', 'G', 'Am', 'F', 'Dm', 'G', 'C', 'C'];
+    const chords = {
+      C: { pad: [261.63, 329.63, 392], bass: 130.81 },
+      G: { pad: [196, 246.94, 293.66], bass: 98 },
+      Am: { pad: [220, 261.63, 329.63], bass: 110 },
+      F: { pad: [174.61, 220, 261.63], bass: 87.31 },
+      Dm: { pad: [146.83, 174.61, 220], bass: 73.42 }
+    };
     let preferred = true;
     try { preferred = localStorage.getItem('naiwa-bgm') !== 'off'; } catch (_) { /* Storage can be unavailable. */ }
     let activated = false;
@@ -46,24 +62,25 @@
 
     function makeContext() {
       if (context || !AudioContextClass) return;
+      try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch (_) { /* Unsupported. */ }
       context = new AudioContextClass();
       const filter = context.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 1400;
+      filter.frequency.value = 2400;
       master = context.createGain();
-      master.gain.value = 0.14;
+      master.gain.value = 0.32;
       filter.connect(master);
       master.connect(context.destination);
       master.input = filter;
     }
 
-    function tone(frequency, time, duration, volume, shape) {
+    function tone(frequency, time, duration, volume, shape, attack = 0.012) {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       oscillator.type = shape;
       oscillator.frequency.setValueAtTime(frequency, time);
       gain.gain.setValueAtTime(0.0001, time);
-      gain.gain.exponentialRampToValueAtTime(volume, time + 0.012);
+      gain.gain.exponentialRampToValueAtTime(volume, time + attack);
       gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
       oscillator.connect(gain);
       gain.connect(master.input);
@@ -74,8 +91,15 @@
     function schedule() {
       while (nextTime < context.currentTime + 0.1) {
         const note = melody[nextStep];
-        if (note !== null) tone(notes[note], nextTime, stepTime * 0.86, 0.22, 'triangle');
-        if (nextStep % 8 === 0) tone(bass[nextStep / 8], nextTime, stepTime * 7.4, 0.12, 'sine');
+        if (note !== null) {
+          const phraseEnd = nextStep === 63 || nextStep === 127;
+          tone(notes[note], nextTime, stepTime * (phraseEnd ? 1.9 : 0.86), 0.5, 'triangle');
+        }
+        if (nextStep % 8 === 0) {
+          const chord = chords[progression[nextStep / 8]];
+          tone(chord.bass, nextTime, stepTime * 7.4, 0.22, 'sine');
+          chord.pad.forEach(frequency => tone(frequency, nextTime, stepTime * 7.9, 0.05, 'sine', 0.08));
+        }
         nextStep = (nextStep + 1) % melody.length;
         nextTime += stepTime;
       }
@@ -85,6 +109,7 @@
       if (!activated || !preferred || document.hidden || !AudioContextClass) return;
       makeContext();
       try { await context.resume(); } catch (_) { return; }
+      if (context.state !== 'running') return;
       if (!preferred || document.hidden) { context.suspend(); return; }
       if (timer) return;
       nextTime = context.currentTime + 0.05;
@@ -100,7 +125,7 @@
 
     function activate() {
       activated = true;
-      start();
+      if (preferred && (!context || context.state !== 'running')) start();
     }
 
     button.addEventListener('click', () => {
@@ -109,8 +134,8 @@
       updateButton();
       if (preferred) start(); else pause();
     });
-    document.addEventListener('pointerdown', activate, { once: true });
-    document.addEventListener('keydown', activate, { once: true });
+    document.addEventListener('pointerdown', activate);
+    document.addEventListener('keydown', activate);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) pause(); else start();
     });
@@ -175,6 +200,10 @@
       element.style.left = `${tile.x * 100}%`;
       element.style.top = `${tile.y * 100}%`;
       element.style.zIndex = tile.layer;
+      if (game.history.length === 0) {
+        element.classList.add('deal-in');
+        element.style.animationDelay = `${Math.min((game.tiles.length - tile.layer) * 8, 400)}ms`;
+      }
     }
     return element;
   }
