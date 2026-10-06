@@ -36,18 +36,28 @@ console.log('✓ 16 种牌型顺序与图片文件一一对应');
 for (const level of [1, 2]) {
   for (let seed = 0; seed < (level === 2 ? 25 : 8); seed++) {
     const game = createGame(level, seed);
-    assert.equal(game.tiles.length, level === 1 ? 24 : 96);
+    assert.equal(game.tiles.length, level === 1 ? 24 : 144);
     assert.equal(game.solutionOrder.length, game.tiles.length);
     assert.equal(new Set(game.solutionOrder).size, game.tiles.length);
     assert.deepEqual(createGame(level, seed), game, '同一 seed 应生成相同牌局');
     const expectedCounts = Object.fromEntries(
-      (level === 1 ? expectedTypes.slice(0, 8) : expectedTypes).map(type => [type, level === 1 ? 3 : 6])
+      (level === 1 ? expectedTypes.slice(0, 8) : expectedTypes).map(type => [type, level === 1 ? 3 : 9])
     );
     assert.deepEqual(counts(game.tiles), expectedCounts);
     assert.equal(solveByOrder(game), true, `关卡 ${level} seed ${seed} 应有解`);
+    if (level === 2) {
+      const copy = JSON.parse(JSON.stringify(game));
+      let peak = 0;
+      for (const id of copy.solutionOrder) {
+        assert.equal(clickTile(copy, id), true, `seed ${seed} 的解序应能逐张点击`);
+        peak = Math.max(peak, copy.slot.length);
+      }
+      assert.ok(peak >= 5, `seed ${seed} 的槽位峰值应至少为 5，实际为 ${peak}`);
+      assert.equal(copy.status, 'win');
+    }
   }
 }
-console.log('✓ 两关张数、类型计数、复现性及 25 个招牌关种子的解序');
+console.log('✓ 两关张数、类型计数、复现性及 25 个招牌关种子的解序与槽位压力');
 
 {
   const game = smallGame(['main-stance', 'thinking']);

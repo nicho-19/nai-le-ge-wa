@@ -55,13 +55,50 @@
     }
     // 均值偏向池塘中心，两侧小堆重叠；边缘仅有少量散牌。
     const heap = random() < .56 ? .37 : .54;
-    const x = heap + (random() + random() + random() - 1.5) * .205;
-    const y = .41 + (random() + random() + random() - 1.5) * .26;
+    const x = heap + (random() + random() + random() - 1.5) * .205 * .85;
+    const y = .41 + (random() + random() + random() - 1.5) * .26 * .85;
     return { x: round(clamp(x, .015, .82)), y: round(clamp(y, .015, .81)) };
+  }
+
+  function levelTwoGame(seed, types, random) {
+    const solutionOrder = [];
+    const tiles = types.map((type, i) => {
+      const id = `tile-${i}`;
+      solutionOrder.push(id);
+      return { id, type, ...position(2, i, random), layer: types.length - i, state: 'board' };
+    });
+    return { level: 2, seed, tiles, solutionOrder, slot: [], held: [],
+      tools: { undo: false, shuffle: false, moveOut: false }, status: 'playing', history: [] };
+  }
+
+  function createLevelTwo(seed) {
+    const random = rng(seed);
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const remaining = new Map(TYPES.map(type => [type.key, 9]));
+      const types = [];
+      while (remaining.size) {
+        const k = Math.min(remaining.size, random() < .7 ? 3 : 2);
+        const wave = shuffle([...remaining.keys()], random).slice(0, k);
+        shuffle(wave.flatMap(type => [type, type]), random).forEach(type => types.push(type));
+        shuffle(wave, random).forEach(type => types.push(type));
+        wave.forEach(type => {
+          const left = remaining.get(type) - 3;
+          if (left) remaining.set(type, left);
+          else remaining.delete(type);
+        });
+      }
+      const game = levelTwoGame(seed, types, random);
+      // 波次交错解序先经实际规则模拟验收；任何 seed 都只返回有解牌局。
+      if (solveByOrder(game)) return game;
+    }
+    // 极端情况下退回成组连续解序，仍保留 144 张和第 2 关位置参数。
+    const groups = shuffle(TYPES.flatMap(type => Array(3).fill(type.key)), random);
+    return levelTwoGame(seed, groups.flatMap(type => [type, type, type]), random);
   }
 
   function createGame(level, seed) {
     if (level !== 1 && level !== 2) throw new RangeError('关卡只能是 1 或 2');
+    if (level === 2) return createLevelTwo(seed);
     const random = rng(seed);
     const groups = [];
     const available = level === 1 ? TYPES.slice(0, 8) : TYPES;
