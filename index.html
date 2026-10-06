@@ -10,7 +10,7 @@
 <body>
   <main class="game-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon" aria-hidden="true">◕ᴗ◕</span><div><h1>奶了个蛙</h1><p>池塘里的三消小挑战</p></div></div>
+      <div class="brand"><span class="brand-icon" aria-hidden="true"><img src="assets/main-stance.png" alt=""></span><div><h1>奶了个蛙</h1><p>池塘里的三消小挑战</p></div></div>
       <div class="top-controls">
         <div class="level-switch" role="group" aria-label="选择关卡">
           <button type="button" class="level-button active" data-level="1">第 1 关</button>
@@ -24,15 +24,17 @@
       <div class="board-wrap">
         <div class="board" id="board" aria-label="棋盘"><div class="loading" role="status">加载中…</div></div>
       </div>
-      <div class="held-row"><span class="row-label">暂存区</span><div class="held-cards" id="held" aria-label="暂存的牌"></div><span class="held-note">点牌可放回</span></div>
-      <div class="slot-heading"><span>荷叶槽位</span><span id="slot-warning" class="slot-warning" aria-live="polite"></span></div>
-      <div class="slot" id="slot" aria-label="七格槽位"></div>
-      <div class="tools" role="group" aria-label="道具">
-        <button type="button" id="undo-button" class="tool-button"><span class="tool-icon">↶</span><span>撤销 <small>剩 1 次</small></span></button>
-        <button type="button" id="shuffle-button" class="tool-button"><span class="tool-icon">↝</span><span>洗牌 <small>剩 1 次</small></span></button>
-        <button type="button" id="move-button" class="tool-button"><span class="tool-icon">⇥</span><span>移出 <small>剩 1 次</small></span></button>
+      <div class="dock">
+        <div class="held-row"><span class="row-label">暂存区</span><div class="held-cards" id="held" aria-label="暂存的牌"></div><span class="held-note">点牌可放回</span></div>
+        <div class="slot-heading"><span>荷叶槽位</span><span id="slot-warning" class="slot-warning" aria-live="polite"></span></div>
+        <div class="slot" id="slot" aria-label="七格槽位"></div>
+        <div class="tools" role="group" aria-label="道具">
+          <button type="button" id="undo-button" class="tool-button"><span class="tool-icon">↶</span><span>撤销 <small>剩 1 次</small></span></button>
+          <button type="button" id="shuffle-button" class="tool-button"><span class="tool-icon">↝</span><span>洗牌 <small>剩 1 次</small></span></button>
+          <button type="button" id="move-button" class="tool-button"><span class="tool-icon">⇥</span><span>移出 <small>剩 1 次</small></span></button>
+        </div>
+        <button type="button" id="restart-button" class="restart-button">↻ 重新开始本关</button>
       </div>
-      <button type="button" id="restart-button" class="restart-button">↻ 重新开始本关</button>
     </section>
   </main>
 

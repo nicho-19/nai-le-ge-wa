@@ -53,11 +53,11 @@
       return { x: round(.065 + col * .205 + (random() - .5) * .018),
         y: round(.03 + row * .15 + (random() - .5) * .018) };
     }
-    // 均值偏向池塘中心，两侧小堆重叠；边缘仅有少量散牌。
-    const heap = random() < .56 ? .37 : .54;
-    const x = heap + (random() + random() + random() - 1.5) * .205 * .85;
-    const y = .41 + (random() + random() + random() - 1.5) * .26 * .85;
-    return { x: round(clamp(x, .015, .82)), y: round(clamp(y, .015, .81)) };
+    // 两堆分开散布，保留足够重叠供玩家逐层揭开。
+    const heap = random() < .56 ? .26 : .66;
+    const x = heap + (random() + random() + random() - 1.5) * .24;
+    const y = .42 + (random() + random() + random() - 1.5) * .30;
+    return { x: round(clamp(x, .01, .83)), y: round(clamp(y, .01, .82)) };
   }
 
   function levelTwoGame(seed, types, random) {
