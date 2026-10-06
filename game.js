@@ -14,29 +14,17 @@
   (function bgm() {
     const button = byId('bgm-button');
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    const bpm = 92;
+    const bpm = 132;
     const stepTime = 60 / bpm / 2;
-    const melody = [
-      0, 1, 2, null, 3, 2, 1, 0,
-      1, 2, 3, 2, 1, null, 2, 3,
-      2, 3, 4, null, 3, 2, 1, 2,
-      0, 1, 2, 3, 2, null, 1, 0,
-      0, 1, 2, null, 3, 4, 3, 2,
-      1, 2, 3, 4, 3, null, 2, 1,
-      2, 3, 4, null, 3, 2, 1, 2,
-      1, 2, 1, 0, 0, null, 0, 0,
-      0, 1, 2, null, 3, 2, 1, 0,
-      1, 2, 3, 2, 1, null, 2, 3,
-      2, 3, 4, null, 3, 2, 1, 2,
-      0, 1, 2, 3, 2, null, 1, 0,
-      1, 2, 3, null, 4, 3, 2, 1,
-      2, 3, 4, 5, 4, null, 3, 2,
-      2, 3, 4, null, 3, 2, 1, 0,
-      2, 1, 0, null, 2, 2, 2, 2
-    ];
+    const motif = [0, 0, 2, null, 4, 4, 5, 4, 2, 2, 1, null, 2, 4, 2, 0];
+    const answer = [2, 2, 4, null, 5, 5, 4, 2, 1, 1, 2, null, 3, 4, 3, 2];
+    const variation = [0, 0, 3, null, 5, 5, 4, 3, 2, 2, 4, null, 5, 4, 2, 1];
+    const ending = [2, 2, 4, null, 5, 5, 4, 2, 1, 1, 2, null, 1, 0, 0, 0];
+    const melody = [...motif, ...motif, ...answer, ...motif, ...motif, ...variation,
+      ...motif, ...ending];
+    if (melody.length !== 128) throw new Error('BGM melody must contain 128 steps');
     const notes = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
-    const progression = ['C', 'G', 'Am', 'F', 'C', 'G', 'F', 'G',
-      'C', 'G', 'Am', 'F', 'Dm', 'G', 'C', 'C'];
+    const progression = Array.from({ length: 16 }, (_, bar) => ['C', 'G', 'Am', 'F'][bar % 4]);
     const chords = {
       C: { pad: [261.63, 329.63, 392], bass: 130.81 },
       G: { pad: [196, 246.94, 293.66], bass: 98 },
@@ -49,6 +37,7 @@
     let activated = false;
     let context;
     let master;
+    let hatNoise;
     let timer;
     let nextStep = 0;
     let nextTime = 0;
@@ -66,12 +55,15 @@
       context = new AudioContextClass();
       const filter = context.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 2400;
+      filter.frequency.value = 3200;
       master = context.createGain();
       master.gain.value = 0.32;
       filter.connect(master);
       master.connect(context.destination);
       master.input = filter;
+      hatNoise = context.createBuffer(1, Math.ceil(context.sampleRate * 0.03), context.sampleRate);
+      const samples = hatNoise.getChannelData(0);
+      for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
     }
 
     function tone(frequency, time, duration, volume, shape, attack = 0.012) {
@@ -88,18 +80,51 @@
       oscillator.stop(time + duration + 0.02);
     }
 
+    function kick(time) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(130, time);
+      oscillator.frequency.exponentialRampToValueAtTime(42, time + 0.12);
+      gain.gain.setValueAtTime(0.5, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.12);
+      oscillator.connect(gain);
+      gain.connect(master);
+      oscillator.start(time);
+      oscillator.stop(time + 0.12);
+    }
+
+    function hat(time) {
+      const source = context.createBufferSource();
+      const filter = context.createBiquadFilter();
+      const gain = context.createGain();
+      source.buffer = hatNoise;
+      filter.type = 'highpass';
+      filter.frequency.value = 7000;
+      gain.gain.setValueAtTime(0.06, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.03);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(master);
+      source.start(time);
+      source.stop(time + 0.03);
+    }
+
     function schedule() {
       while (nextTime < context.currentTime + 0.1) {
         const note = melody[nextStep];
         if (note !== null) {
-          const phraseEnd = nextStep === 63 || nextStep === 127;
-          tone(notes[note], nextTime, stepTime * (phraseEnd ? 1.9 : 0.86), 0.5, 'triangle');
+          const held = melody[(nextStep + 1) % melody.length] === null;
+          tone(notes[note], nextTime, stepTime * (held ? 1.8 : 0.86), 0.30, 'square');
         }
-        if (nextStep % 8 === 0) {
-          const chord = chords[progression[nextStep / 8]];
-          tone(chord.bass, nextTime, stepTime * 7.4, 0.22, 'sine');
-          chord.pad.forEach(frequency => tone(frequency, nextTime, stepTime * 7.9, 0.05, 'sine', 0.08));
+        const beat = nextStep % 8;
+        const chord = chords[progression[Math.floor(nextStep / 8)]];
+        tone(chord.bass * (nextStep % 2 ? 1.5 : 1), nextTime, stepTime * 0.8, 0.16, 'triangle');
+        if (beat === 0 || beat === 4) {
+          kick(nextTime);
+          chord.pad.forEach(frequency => tone(frequency, nextTime, stepTime * 2, 0.045, 'sine', 0.008));
         }
+        if (beat % 2 === 1) hat(nextTime);
         nextStep = (nextStep + 1) % melody.length;
         nextTime += stepTime;
       }
