@@ -5,21 +5,23 @@
   'use strict';
 
   const TYPES = Object.freeze([
-    { key: 'plain', label: '原版', color: '#FFF3C8' },
-    { key: 'straw', label: '草帽', color: '#FFE6AD' },
-    { key: 'tophat', label: '礼帽', color: '#DDD9E9' },
-    { key: 'scarf', label: '红巾', color: '#FFD7CF' },
-    { key: 'shades', label: '墨镜', color: '#DCE5E7' },
-    { key: 'sleep', label: '睡觉', color: '#D9E8FF' },
-    { key: 'laugh', label: '大笑', color: '#FFE2AF' },
-    { key: 'cry', label: '哭哭', color: '#CDEDF4' },
-    { key: 'angry', label: '生气', color: '#FFD6D9' },
-    { key: 'leaf', label: '荷叶', color: '#DDF1BC' },
-    { key: 'bottle', label: '奶瓶', color: '#E5E6FF' },
-    { key: 'chef', label: '厨师', color: '#F2E9DB' },
-    { key: 'crown', label: '王冠', color: '#FBE6B2' },
-    { key: 'winter', label: '围巾', color: '#D5EDF7' },
-    { key: 'pack', label: '背包', color: '#F8DFC5' }
+    { key: 'main-stance', label: '站姿招手' },
+    { key: 'laugh-closeup', label: '大笑特写' },
+    { key: 'thinking', label: '托腮思考' },
+    { key: 'pray-wings', label: '天使合掌' },
+    { key: 'shocked', label: '抱头震惊' },
+    { key: 'monk', label: '和尚合掌' },
+    { key: 'belly-hold-a', label: '抱肚站立' },
+    { key: 'profile-stand', label: '侧面站' },
+    { key: 'laugh-headback', label: '仰头大笑' },
+    { key: 'santa-lie', label: '圣诞躺笑' },
+    { key: 'point-laugh', label: '指人笑' },
+    { key: 'peace-tongue', label: '比耶吐舌' },
+    { key: 'running', label: '跑步' },
+    { key: 'dancing', label: '跳舞' },
+    { key: 'sleeping', label: '睡觉' },
+    { key: 'chef', label: '厨师服' },
+    { key: 'superhero', label: '超人披风' }
   ]);
   const TILE_WIDTH = 0.16;
   const TILE_HEIGHT = 0.17;
@@ -64,8 +66,8 @@
     const random = rng(seed);
     const groups = [];
     const available = level === 1 ? TYPES.slice(0, 8) : TYPES;
-    available.forEach((type, i) => {
-      const copies = level === 1 ? 3 : (i < 6 ? 9 : 6); // 24 / 108 张，均为 3 的倍数
+    available.forEach(type => {
+      const copies = level === 1 ? 3 : 6; // 24 / 102 张，均为 3 的倍数
       for (let n = 0; n < copies / 3; n++) groups.push(type.key);
     });
     shuffle(groups, random);
