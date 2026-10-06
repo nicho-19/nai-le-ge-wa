@@ -11,6 +11,112 @@
   let pendingLevel = 1;
   const imageState = new Map();
 
+  (function bgm() {
+    const button = byId('bgm-button');
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const bpm = 92;
+    const stepTime = 60 / bpm / 2;
+    const melody = [
+      0, null, 2, null, 3, 2, 1, null,
+      0, null, 1, 2, 3, null, 2, null,
+      4, null, 3, 2, 1, null, 0, null,
+      1, 2, 3, null, 2, null, 1, null,
+      0, null, 2, 3, 4, null, 3, null,
+      2, null, 1, 0, 1, null, 2, null,
+      3, null, 4, 3, 2, null, 1, null,
+      0, null, 1, 2, 0, null, null, null
+    ];
+    const notes = [523.25, 587.33, 659.25, 783.99, 880];
+    const bass = [130.81, 98, 110, 98, 130.81, 164.81, 98, 130.81];
+    let preferred = true;
+    try { preferred = localStorage.getItem('naiwa-bgm') !== 'off'; } catch (_) { /* Storage can be unavailable. */ }
+    let activated = false;
+    let context;
+    let master;
+    let timer;
+    let nextStep = 0;
+    let nextTime = 0;
+
+    function updateButton() {
+      button.classList.toggle('active', preferred);
+      button.setAttribute('aria-pressed', String(preferred));
+      button.setAttribute('aria-label', preferred ? '音乐开' : '已静音');
+      button.querySelector('.bgm-label').textContent = preferred ? '音乐开' : '已静音';
+    }
+
+    function makeContext() {
+      if (context || !AudioContextClass) return;
+      context = new AudioContextClass();
+      const filter = context.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1400;
+      master = context.createGain();
+      master.gain.value = 0.14;
+      filter.connect(master);
+      master.connect(context.destination);
+      master.input = filter;
+    }
+
+    function tone(frequency, time, duration, volume, shape) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = shape;
+      oscillator.frequency.setValueAtTime(frequency, time);
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(volume, time + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+      oscillator.connect(gain);
+      gain.connect(master.input);
+      oscillator.start(time);
+      oscillator.stop(time + duration + 0.02);
+    }
+
+    function schedule() {
+      while (nextTime < context.currentTime + 0.1) {
+        const note = melody[nextStep];
+        if (note !== null) tone(notes[note], nextTime, stepTime * 0.86, 0.22, 'triangle');
+        if (nextStep % 8 === 0) tone(bass[nextStep / 8], nextTime, stepTime * 7.4, 0.12, 'sine');
+        nextStep = (nextStep + 1) % melody.length;
+        nextTime += stepTime;
+      }
+    }
+
+    async function start() {
+      if (!activated || !preferred || document.hidden || !AudioContextClass) return;
+      makeContext();
+      try { await context.resume(); } catch (_) { return; }
+      if (!preferred || document.hidden) { context.suspend(); return; }
+      if (timer) return;
+      nextTime = context.currentTime + 0.05;
+      schedule();
+      timer = setInterval(schedule, 25);
+    }
+
+    function pause() {
+      clearInterval(timer);
+      timer = undefined;
+      if (context && context.state === 'running') context.suspend();
+    }
+
+    function activate() {
+      activated = true;
+      start();
+    }
+
+    button.addEventListener('click', () => {
+      preferred = !preferred;
+      try { localStorage.setItem('naiwa-bgm', preferred ? 'on' : 'off'); } catch (_) { /* Storage can be unavailable. */ }
+      updateButton();
+      if (preferred) start(); else pause();
+    });
+    document.addEventListener('pointerdown', activate, { once: true });
+    document.addEventListener('keydown', activate, { once: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) pause(); else start();
+    });
+    updateButton();
+  })();
+
   function fallback(label) {
     const circle = document.createElement('span');
     circle.className = 'tile-fallback';
