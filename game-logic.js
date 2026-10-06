@@ -24,6 +24,15 @@
   ]);
   const TILE_WIDTH = 0.16;
   const TILE_HEIGHT = 0.17;
+  const LEVELS = Object.freeze([
+    { name: '热身塘', count: 24, copies: 3, layout: 'legacy-grid' },
+    { name: '双荷塘', count: 144, copies: 9, centers: [[.26, .42], [.66, .42]], spread: [.24, .30], wave: [2, 3], layout: 'legacy-double' },
+    { name: '深水塘', count: 192, copies: 12, centers: [[.26, .42], [.66, .42]], spread: [.216, .27], wave: [2, 3] },
+    { name: '迷雾塘', count: 192, copies: 12, centers: [[.26, .42], [.66, .42]], spread: [.1872, .234], wave: [1, 2] },
+    { name: '中央塔', count: 240, copies: 15, centers: [[.42, .41]], spread: [.28, .32], wave: [2, 3] },
+    { name: '环形阵', count: 240, copies: 15, centers: [[.72, .405], [.57, .64], [.27, .64], [.12, .405], [.27, .17], [.57, .17], [.42, .405]], spread: [.08, .10], wave: [2, 3] },
+    { name: '终局高塔', count: 288, copies: 18, centers: [[.42, .41]], spread: [.25, .28], wave: [1, 2] }
+  ]);
 
   function rng(seed) {
     let value = (Number(seed) || 0) >>> 0;
@@ -96,8 +105,47 @@
     return levelTwoGame(seed, groups.flatMap(type => [type, type, type]), random);
   }
 
+  function configuredPosition(config, random) {
+    const center = config.centers[Math.floor(random() * config.centers.length)];
+    const x = center[0] + (random() + random() + random() - 1.5) * config.spread[0];
+    const y = center[1] + (random() + random() + random() - 1.5) * config.spread[1];
+    return { x: round(clamp(x, .01, .83)), y: round(clamp(y, .01, .82)) };
+  }
+
+  function createConfiguredGame(level, seed) {
+    const config = LEVELS[level - 1];
+    const random = rng(seed);
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const remaining = new Map(TYPES.map(type => [type.key, config.copies]));
+      const types = [];
+      while (remaining.size) {
+        const width = random() < .7 ? config.wave[1] : config.wave[0];
+        const wave = shuffle([...remaining.keys()], random).slice(0, Math.min(remaining.size, width));
+        shuffle(wave.flatMap(type => [type, type]), random).forEach(type => types.push(type));
+        shuffle(wave, random).forEach(type => types.push(type));
+        wave.forEach(type => {
+          const left = remaining.get(type) - 3;
+          if (left) remaining.set(type, left);
+          else remaining.delete(type);
+        });
+      }
+      const solutionOrder = [];
+      const tiles = types.map((type, i) => {
+        const id = `tile-${i}`;
+        solutionOrder.push(id);
+        return { id, type, ...configuredPosition(config, random), layer: types.length - i, state: 'board' };
+      });
+      const game = { level, seed, tiles, solutionOrder, slot: [], held: [],
+        tools: { undo: false, shuffle: false, moveOut: false }, status: 'playing', history: [] };
+      const opening = Object.values(blockedMap(game)).filter(blocked => !blocked).length;
+      if (opening >= 2 && opening <= 20 && solveByOrder(game)) return game;
+    }
+    throw new Error(`关卡 ${level} seed ${seed} 未生成有解牌局`);
+  }
+
   function createGame(level, seed) {
-    if (level !== 1 && level !== 2) throw new RangeError('关卡只能是 1 或 2');
+    if (!Number.isInteger(level) || level < 1 || level > LEVELS.length) throw new RangeError('关卡只能是 1 到 7');
+    if (level >= 3) return createConfiguredGame(level, seed);
     if (level === 2) return createLevelTwo(seed);
     const random = rng(seed);
     const groups = [];
@@ -238,6 +286,6 @@
     return copy.status === 'win';
   }
 
-  return { TYPES, TILE_WIDTH, TILE_HEIGHT, createGame, blockedMap, clickTile, clickHeld,
+  return { TYPES, LEVELS, TILE_WIDTH, TILE_HEIGHT, createGame, blockedMap, clickTile, clickHeld,
     useUndo, useShuffle, useMoveOut, solveByOrder };
 });

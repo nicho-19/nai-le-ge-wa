@@ -177,4 +177,25 @@ console.log('✓ 移出、暂存牌点回、正常消除、全清胜利与限用
 }
 console.log('✓ 撤销移出道具及暂存牌点回');
 
+for (const [level, copies] of [[3, 12], [4, 12], [5, 15], [6, 15], [7, 18]]) {
+  for (let seed = 0; seed < 15; seed++) {
+    const game = createGame(level, seed);
+    assert.equal(game.tiles.length, copies * 16);
+    assert.equal(game.solutionOrder.length, game.tiles.length);
+    assert.equal(new Set(game.solutionOrder).size, game.tiles.length);
+    assert.deepEqual(counts(game.tiles), Object.fromEntries(expectedTypes.map(type => [type, copies])));
+    assert.deepEqual(createGame(level, seed), game, `关卡 ${level} seed ${seed} 应可复现`);
+    assert.equal(solveByOrder(game), true, `关卡 ${level} seed ${seed} 应有解`);
+    const copy = JSON.parse(JSON.stringify(game));
+    let peak = 0;
+    for (const id of copy.solutionOrder) {
+      assert.equal(clickTile(copy, id), true, `关卡 ${level} seed ${seed} 的解序应可逐张点击`);
+      peak = Math.max(peak, copy.slot.length);
+    }
+    assert.ok(peak <= 7, `关卡 ${level} seed ${seed} 的槽峰值应不超过 7`);
+    assert.equal(copy.status, 'win');
+  }
+}
+console.log('✓ 第 3–7 关各 15 个种子的牌数、类型计数、复现性、有解性及槽峰值');
+
 console.log('全部测试通过');

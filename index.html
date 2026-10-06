@@ -10,12 +10,17 @@
 <body>
   <main class="game-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon" aria-hidden="true"><img src="assets/main-stance.png" alt=""></span><div><h1>奶了个蛙</h1><p>池塘里的三消小挑战</p></div></div>
+      <div class="brand"><span class="brand-icon" aria-hidden="true"><img src="assets/main-stance.png" alt=""></span><div><h1>奶了个蛙</h1><p id="level-name">第 1 关 · 热身塘</p></div></div>
       <div class="top-controls">
         <button type="button" id="bgm-button" class="bgm-button" aria-label="音乐开" aria-pressed="true"><span aria-hidden="true">♪</span><span class="bgm-label">音乐开</span></button>
         <div class="level-switch" role="group" aria-label="选择关卡">
-          <button type="button" class="level-button active" data-level="1">第 1 关</button>
-          <button type="button" class="level-button" data-level="2">第 2 关</button>
+          <button type="button" class="level-button active" data-level="1" aria-label="第 1 关 · 热身塘">1</button>
+          <button type="button" class="level-button" data-level="2" aria-label="第 2 关 · 双荷塘" disabled>2</button>
+          <button type="button" class="level-button" data-level="3" aria-label="第 3 关 · 深水塘" disabled>3</button>
+          <button type="button" class="level-button" data-level="4" aria-label="第 4 关 · 迷雾塘" disabled>4</button>
+          <button type="button" class="level-button" data-level="5" aria-label="第 5 关 · 中央塔" disabled>5</button>
+          <button type="button" class="level-button" data-level="6" aria-label="第 6 关 · 环形阵" disabled>6</button>
+          <button type="button" class="level-button" data-level="7" aria-label="第 7 关 · 终局高塔" disabled>7</button>
         </div>
         <div class="remaining" aria-live="polite"><span class="remaining-prefix">棋盘剩余 </span><strong id="remaining-count">24</strong><span class="remaining-suffix"> 张</span></div>
       </div>

@@ -9,6 +9,22 @@
   const modal = byId('result-modal');
   let game;
   let pendingLevel = 1;
+  const progressKey = 'naiwa-progress';
+  let progress = { unlocked: 1, lastLevel: 1 };
+  try {
+    const saved = JSON.parse(localStorage.getItem(progressKey));
+    if (saved && Number.isInteger(saved.unlocked) && saved.unlocked >= 1) {
+      progress.unlocked = Math.min(saved.unlocked, logic.LEVELS.length);
+      if (Number.isInteger(saved.lastLevel) && saved.lastLevel >= 1) {
+        progress.lastLevel = Math.min(saved.lastLevel, progress.unlocked);
+      }
+    }
+  } catch (_) { /* Storage can be unavailable. */ }
+  pendingLevel = progress.lastLevel;
+
+  function saveProgress() {
+    try { localStorage.setItem(progressKey, JSON.stringify(progress)); } catch (_) { /* Storage can be unavailable. */ }
+  }
   const imageState = new Map();
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let lastRemaining;
@@ -264,6 +280,13 @@
   }
 
   function render() {
+    if (game.status === 'win' && game.level < logic.LEVELS.length) {
+      const unlocked = Math.max(progress.unlocked, game.level + 1);
+      if (unlocked !== progress.unlocked) {
+        progress.unlocked = unlocked;
+        saveProgress();
+      }
+    }
     const blocked = logic.blockedMap(game);
     board.replaceChildren(...game.tiles.filter(tile => tile.state === 'board')
       .map(tile => tileElement(tile, 'board', blocked[tile.id])));
@@ -291,7 +314,9 @@
     document.querySelectorAll('.level-button').forEach(button => {
       button.classList.toggle('active', Number(button.dataset.level) === game.level);
       button.setAttribute('aria-pressed', String(Number(button.dataset.level) === game.level));
+      button.disabled = Number(button.dataset.level) > progress.unlocked;
     });
+    byId('level-name').textContent = `第 ${game.level} 关 · ${logic.LEVELS[game.level - 1].name}`;
     [['undo-button', 'undo', game.history.length > 0], ['shuffle-button', 'shuffle', game.status === 'playing'],
       ['move-button', 'moveOut', game.status === 'playing' && game.slot.length > 0]].forEach(([id, name, possible]) => {
       const button = byId(id);
@@ -305,11 +330,12 @@
     if (game.status === 'playing') { modal.hidden = true; return; }
     modal.hidden = false;
     byId('result-frog').replaceChildren(frogImage(game.status === 'win' ? 'main-stance' : 'shocked'));
-    byId('result-title').textContent = game.status === 'win' ? '蛙！你赢啦！' : '池塘挤满啦';
+    byId('result-title').textContent = game.status === 'win'
+      ? (game.level === logic.LEVELS.length ? '七关全通，蛙王就是你！' : '蛙！你赢啦！') : '池塘挤满啦';
     const unused = [!game.tools.undo && game.history.length && '撤销', !game.tools.shuffle && '洗牌',
       !game.tools.moveOut && '移出'].filter(Boolean);
     byId('result-message').textContent = game.status === 'win'
-      ? '一池塘蛙都被你凑齐了！'
+      ? (game.level === logic.LEVELS.length ? '七座池塘都被你凑齐啦！' : '一池塘蛙都被你凑齐了！')
       : `七格槽位已满。${unused.length ? `重玩时记得试试：${unused.join('、')}。` : '再试一次，先凑齐同类奶蛙吧！'}`;
     const actions = byId('result-actions');
     actions.replaceChildren();
@@ -324,10 +350,10 @@
     replay.className = 'secondary';
     replay.addEventListener('click', () => reset(game.level, game.seed));
     actions.append(replay);
-    if (game.status === 'win' && game.level === 1) {
+    if (game.status === 'win' && game.level < logic.LEVELS.length) {
       const next = document.createElement('button');
       next.textContent = '下一关';
-      next.addEventListener('click', () => reset(2, Date.now()));
+      next.addEventListener('click', () => reset(game.level + 1, Date.now()));
       actions.prepend(next);
     }
   }
@@ -408,6 +434,10 @@
   }
 
   function reset(level, seed) {
+    if (level > progress.unlocked) return;
+    pendingLevel = level;
+    progress.lastLevel = level;
+    saveProgress();
     game = logic.createGame(level, seed);
     lastRemaining = undefined;
     render();
@@ -433,6 +463,7 @@
   byId('move-button').addEventListener('click', () => { if (game && logic.useMoveOut(game)) render(); });
   byId('restart-button').addEventListener('click', () => { if (game) reset(game.level, game.seed); });
   document.querySelectorAll('.level-button').forEach(button => button.addEventListener('click', () => {
+    if (button.disabled) return;
     pendingLevel = Number(button.dataset.level);
     if (game) reset(pendingLevel, Date.now());
   }));

@@ -20,6 +20,9 @@ h1{margin:0;color:var(--leaf);font-size:clamp(17px,3.4vw,25px);letter-spacing:1p
 .level-switch{display:flex;padding:2px;gap:2px;border:1px solid #ffffffc9;background:#f7ead0;border-radius:99px;box-shadow:0 2px 5px #a0782821}
 .level-button{border:0;border-radius:99px;padding:5px 8px;background:transparent;color:#9a6d1f;font-weight:800;font-size:11px;white-space:nowrap}
 .level-button.active{background:#ffedb8;color:#9a6d1f;box-shadow:0 2px 5px #a0782833}
+.level-button{position:relative;min-width:23px;text-align:center}
+.level-button:disabled{color:#a89675;cursor:default}
+.level-button:disabled:after{content:"🔒";position:absolute;right:0;bottom:0;font-size:7px;line-height:1}
 .remaining{padding:4px 7px;border-radius:99px;background:#f7ead0;color:#5b4a2f;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 4px #a0782830}
 .remaining strong{font-size:15px;color:#9a6d1f}
 .play-area{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:8px;border:2px solid var(--mist);border-radius:20px;background:var(--pond-soft);box-shadow:0 5px 14px #a0782830}
@@ -72,7 +75,7 @@ h1{margin:0;color:var(--leaf);font-size:clamp(17px,3.4vw,25px);letter-spacing:1p
 .modal h2{margin:0 0 8px;font-size:26px;color:#9a6d1f}.modal p{margin:0 0 16px;color:#816b46;line-height:1.6}
 .modal-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.modal-actions button{padding:9px 17px;border:0;border-radius:12px;background:#c08a2d;color:#fffdf6;font-weight:900;box-shadow:0 4px 0 #9a6d1f}.modal-actions button.secondary{background:#ffedb8;color:#9a6d1f;box-shadow:0 4px 0 #d0ae68}
 @media(max-width:600px){.remaining-prefix,.remaining-suffix{display:none}}
-@media(max-width:480px){.game-shell{padding:8px}.topbar{gap:4px}.brand p{display:none}.level-button{padding:5px 6px;font-size:10px}.bgm-button{padding:4px 5px;font-size:10px}.remaining{padding:4px 6px}.play-area{padding:6px}.dock{padding:6px 8px}.held-note{font-size:9px}.held-cards{min-width:110px}.slot{gap:2px;padding:3px;border-width:2px}.slot-cell{min-height:48px;border-width:1px;border-radius:6px}.tools{gap:4px}.tool-button{gap:3px;font-size:11px}.tool-icon{font-size:20px}.restart-button{font-size:10px}}
-@media(max-width:360px){.held-note{display:none}.top-controls{gap:2px}.brand{gap:3px}h1{font-size:16px}.bgm-button{gap:1px;padding:4px}.level-button{padding:5px 4px}.remaining{padding:4px 5px}}
-@media(max-height:720px){.brand p{display:none}.slot-cell{min-height:44px}.held-cards .tile{height:40px}.dock{padding-top:4px;padding-bottom:4px}}
+@media(max-width:480px){.game-shell{padding:8px}.topbar{gap:4px;flex-wrap:wrap}.top-controls{width:100%;justify-content:space-between}.brand p{font-size:10px}.level-button{padding:5px 4px;font-size:10px}.bgm-button{padding:4px 5px;font-size:10px}.remaining{padding:4px 6px}.play-area{padding:6px}.dock{padding:6px 8px}.held-note{font-size:9px}.held-cards{min-width:110px}.slot{gap:2px;padding:3px;border-width:2px}.slot-cell{min-height:48px;border-width:1px;border-radius:6px}.tools{gap:4px}.tool-button{gap:3px;font-size:11px}.tool-icon{font-size:20px}.restart-button{font-size:10px}}
+@media(max-width:360px){.held-note{display:none}.top-controls{gap:2px}.brand{gap:3px}h1{font-size:16px}.bgm-button{gap:1px;padding:4px}.level-button{padding:5px 3px;min-width:21px}.remaining{padding:4px 5px}}
+@media(max-height:720px){.slot-cell{min-height:44px}.held-cards .tile{height:40px}.dock{padding-top:4px;padding-bottom:4px}}
 @media(prefers-reduced-motion:reduce){.slot-warning,.slot.slot-danger,.board .tile,.modal,.modal-backdrop{animation:none}.tile,.slot,.progress-fill{transition:none}}
